@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAP MM/SD Roadmap — Material Flow to Material Ledger</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg: #0d1826;
+    --bg-alt: #0a1320;
+    --panel: #142238;
+    --panel-2: #182842;
+    --hairline: rgba(210,224,242,0.09);
+    --hairline-strong: rgba(210,224,242,0.16);
+    --text: #eef1f6;
+    --text-dim: #9fb0c7;
+    --text-faint: #6b7d97;
+    --gold: #d8ae5e;
+    --gold-dim: rgba(216,174,94,0.16);
+    --cyan: #57c2d6;
+    --cyan-dim: rgba(87,194,214,0.14);
+    --green: #7bcf9e;
+    --green-dim: rgba(123,207,158,0.16);
+    --radius: 10px;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1100px 600px at 15% -10%, rgba(87,194,214,0.08), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(216,174,94,0.06), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+
+  ::selection{ background: var(--gold-dim); color:var(--text); }
+
+  /* ---------- layout shell ---------- */
+  .app{ max-width:1400px; margin:0 auto; padding:0 28px 80px; }
+
+  /* ---------- hero ---------- */
+  .hero{ padding:56px 0 28px; border-bottom:1px solid var(--hairline); }
+  .eyebrow{
+    font-family:var(--font-mono); font-size:12px; letter-spacing:0.14em; text-transform:uppercase;
+    color:var(--cyan); display:flex; align-items:center; gap:10px; margin-bottom:18px;
+  }
+  .eyebrow::before{ content:''; width:18px; height:1px; background:var(--cyan); display:inline-block; }
+  h1{
+    font-family:var(--font-display); font-weight:700; font-size:clamp(32px,4.4vw,54px);
+    line-height:1.05; margin:0 0 16px; letter-spacing:-0.01em;
+  }
+  h1 span{ color:var(--gold); }
+  .hero-sub{ max-width:680px; color:var(--text-dim); font-size:16px; line-height:1.65; margin:0 0 32px; }
+
+  .meta-row{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:36px; }
+  .meta-chip{
+    font-family:var(--font-mono); font-size:11.5px; color:var(--text-dim);
+    border:1px solid var(--hairline-strong); border-radius:999px; padding:6px 13px;
+    display:flex; align-items:center; gap:7px;
+  }
+  .meta-chip b{ color:var(--text); font-weight:600; }
+  .dot{ width:6px; height:6px; border-radius:50%; background:var(--gold); }
+
+  /* ---------- pipeline rail (signature element) ---------- */
+  .rail-wrap{ position:relative; padding:6px 0 4px; }
+  .rail-track{
+    position:relative; display:flex; justify-content:space-between; align-items:flex-start;
+    padding-top:4px;
+  }
+  .rail-line{
+    position:absolute; top:19px; left:19px; right:19px; height:2px;
+    background:linear-gradient(90deg, var(--hairline-strong), var(--hairline-strong));
+    z-index:0;
+  }
+  .rail-line-fill{
+    position:absolute; top:0; left:0; height:100%; width:0%;
+    background:linear-gradient(90deg, var(--gold), var(--cyan));
+    transition:width .5s ease;
+  }
+  .rail-node{
+    position:relative; z-index:1; display:flex; flex-direction:column; align-items:center;
+    gap:10px; background:none; border:none; cursor:pointer; padding:0; flex:1;
+    font-family:var(--font-body);
+  }
+  .rail-dot{
+    width:38px; height:38px; border-radius:50%; background:var(--panel);
+    border:2px solid var(--hairline-strong); display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); font-size:13px; color:var(--text-dim); transition:all .25s ease;
+  }
+  .rail-node.active .rail-dot{
+    border-color:var(--gold); color:var(--gold); box-shadow:0 0 0 5px var(--gold-dim);
+  }
+  .rail-node.complete .rail-dot{
+    background:var(--green-dim); border-color:var(--green); color:var(--green);
+  }
+  .rail-node.complete .rail-dot::after{ content:'✓'; }
+  .rail-node.complete .rail-dot span{ display:none; }
+  .rail-label{
+    font-size:11.5px; color:var(--text-faint); text-align:center; max-width:92px; line-height:1.3;
+    transition:color .2s ease;
+  }
+  .rail-node.active .rail-label{ color:var(--text); }
+  .rail-node:hover .rail-label{ color:var(--text); }
+
+  /* ---------- overall progress ---------- */
+  .progress-strip{ display:flex; align-items:center; gap:14px; margin-top:26px; }
+  .progress-bar{ flex:1; height:6px; border-radius:99px; background:var(--panel-2); overflow:hidden; border:1px solid var(--hairline); }
+  .progress-fill{ height:100%; width:0%; background:linear-gradient(90deg, var(--gold), var(--cyan)); transition:width .4s ease; }
+  .progress-text{ font-family:var(--font-mono); font-size:12px; color:var(--text-dim); white-space:nowrap; }
+
+  /* ---------- main two-col layout ---------- */
+  .layout{ display:grid; grid-template-columns:230px 1fr; gap:44px; margin-top:44px; align-items:start; }
+  .sidebar{ position:sticky; top:24px; display:flex; flex-direction:column; gap:2px; }
+  .side-title{ font-family:var(--font-mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-faint); margin:0 0 10px; }
+  .side-link{
+    font-size:13.5px; color:var(--text-dim); text-decoration:none; padding:9px 12px; border-radius:8px;
+    border-left:2px solid transparent; transition:all .15s ease; display:flex; justify-content:space-between; gap:8px;
+  }
+  .side-link:hover{ background:var(--panel); color:var(--text); }
+  .side-link.current{ border-left-color:var(--gold); color:var(--text); background:var(--panel); }
+  .side-link small{ font-family:var(--font-mono); color:var(--text-faint); }
+  .side-divider{ height:1px; background:var(--hairline); margin:16px 0; }
+
+  /* ---------- content ---------- */
+  .content{ display:flex; flex-direction:column; gap:22px; }
+
+  .phase{
+    background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
+    padding:30px 32px; scroll-margin-top:24px;
+  }
+  .phase-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:20px; flex-wrap:wrap; margin-bottom:6px; }
+  .phase-kicker{ font-family:var(--font-mono); font-size:12px; color:var(--gold); letter-spacing:.08em; }
+  .phase-title{ font-family:var(--font-display); font-size:24px; font-weight:600; margin:4px 0 10px; }
+  .phase-time{
+    font-family:var(--font-mono); font-size:11.5px; color:var(--cyan); border:1px solid rgba(87,194,214,0.35);
+    background:var(--cyan-dim); padding:5px 11px; border-radius:999px; white-space:nowrap; height:fit-content;
+  }
+  .phase-desc{ color:var(--text-dim); font-size:14.5px; line-height:1.7; margin:0 0 20px; max-width:78ch; }
+  .phase-desc code, .inline-code{
+    font-family:var(--font-mono); font-size:0.92em; color:var(--gold); background:rgba(216,174,94,0.08);
+    padding:1px 5px; border-radius:4px;
+  }
+
+  .codes-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px; }
+  .code-tag{
+    font-family:var(--font-mono); font-size:11px; color:var(--text-dim); border:1px dashed var(--hairline-strong);
+    padding:4px 9px; border-radius:6px;
+  }
+
+  .checklist{ display:flex; flex-direction:column; gap:2px; border-top:1px solid var(--hairline); padding-top:16px; }
+  .check-item{ display:flex; align-items:flex-start; gap:12px; padding:9px 6px; border-radius:8px; cursor:pointer; transition:background .15s ease; }
+  .check-item:hover{ background:var(--panel-2); }
+  .check-box{
+    width:17px; height:17px; border-radius:5px; border:1.5px solid var(--hairline-strong); flex:none; margin-top:2px;
+    display:flex; align-items:center; justify-content:center; transition:all .15s ease; background:var(--bg-alt);
+  }
+  .check-item.checked .check-box{ background:var(--green); border-color:var(--green); }
+  .check-item.checked .check-box::after{ content:'✓'; font-size:11px; color:#08130c; font-weight:700; }
+  .check-item span.label{ font-size:13.5px; color:var(--text-dim); line-height:1.5; transition:color .15s ease; }
+  .check-item.checked span.label{ color:var(--text-faint); text-decoration:line-through; text-decoration-color:var(--hairline-strong); }
+
+  /* ---------- deep dive section ---------- */
+  .section-heading{ margin:8px 0 4px; }
+  .section-heading .eyebrow{ margin-bottom:10px; }
+  .section-heading h2{ font-family:var(--font-display); font-size:26px; margin:0 0 10px; }
+  .section-heading p{ color:var(--text-dim); font-size:14.5px; max-width:74ch; line-height:1.7; margin:0 0 26px;}
+
+  /* lens toggle */
+  .lens-panel{ background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius); padding:28px 30px; }
+  .lens-switch{ display:inline-flex; border:1px solid var(--hairline-strong); border-radius:999px; padding:3px; margin-bottom:22px; }
+  .lens-switch button{
+    font-family:var(--font-mono); font-size:12px; letter-spacing:.03em; padding:8px 18px; border-radius:999px;
+    border:none; background:transparent; color:var(--text-dim); cursor:pointer; transition:all .2s ease;
+  }
+  .lens-switch button.active{ background:var(--gold); color:#241a08; font-weight:600; }
+  .lens-switch button.active.s4{ background:var(--cyan); color:#062227; }
+
+  .lens-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(230px,1fr)); gap:14px; }
+  .lens-card{ border:1px solid var(--hairline); border-radius:9px; padding:18px 18px; background:var(--panel-2); }
+  .lens-card h4{ margin:0 0 10px; font-size:13.5px; font-family:var(--font-mono); color:var(--text-faint); letter-spacing:.03em; text-transform:uppercase; }
+  .lens-card p{ margin:0; font-size:13.5px; color:var(--text-dim); line-height:1.6; }
+  .lens-card p b{ color:var(--text); font-weight:600; }
+  .lens-card code{ font-family:var(--font-mono); color:var(--gold); background:rgba(216,174,94,0.08); padding:1px 5px; border-radius:4px; font-size:.92em; }
+  .lens-panel[data-lens="s4"] .lens-card code{ color:var(--cyan); background:rgba(87,194,214,0.09); }
+
+  /* deep technical cards */
+  .tech-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:18px; margin-top:18px; }
+  .tech-card{ background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius); padding:26px 26px; }
+  .tech-icon{ width:38px; height:38px; margin-bottom:16px; }
+  .tech-card h3{ font-family:var(--font-display); font-size:18px; margin:0 0 10px; }
+  .tech-card p{ font-size:13.5px; color:var(--text-dim); line-height:1.65; margin:0 0 12px; }
+  .tech-card p:last-child{ margin-bottom:0; }
+  .tech-card .flow{ font-family:var(--font-mono); font-size:12px; color:var(--gold); background:rgba(216,174,94,0.07); border:1px solid var(--hairline); border-radius:7px; padding:10px 12px; line-height:1.7; margin-top:12px;}
+
+  /* perspective chips */
+  .perspectives{ display:flex; flex-wrap:wrap; gap:10px; margin-top:26px; }
+  .persp-chip{
+    display:flex; gap:9px; align-items:flex-start; font-size:12.5px; color:var(--text-dim);
+    border:1px solid var(--hairline); border-radius:8px; padding:10px 13px; max-width:270px; line-height:1.55;
+  }
+  .persp-chip .persp-tag{ font-family:var(--font-mono); color:var(--gold); flex:none; font-size:11px; padding-top:1px; }
+
+  footer{ margin-top:60px; padding-top:24px; border-top:1px solid var(--hairline); color:var(--text-faint); font-size:12px; font-family:var(--font-mono); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+
+  /* mobile */
+  @media (max-width: 880px){
+    .layout{ grid-template-columns:1fr; }
+    .sidebar{ position:static; flex-direction:row; flex-wrap:wrap; }
+    .side-link{ border-left:none; border-bottom:2px solid transparent; }
+    .side-link.current{ border-bottom-color:var(--gold); border-left-color:transparent; }
+    .rail-label{ display:none; }
+    .rail-track{ padding:0 4px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="hero">
+    <div class="eyebrow">Consulting Track · MM / SD · ECC → S/4HANA</div>
+    <h1>The material stays the same.<br>The <span>ledger underneath it doesn't.</span></h1>
+    <p class="hero-sub">A phased route through SAP Material Master, Sourcing &amp; Procurement (MM), and Sales &amp; Distribution (SD) — with the data model, MATDOC, and Material Ledger changes that separate an ECC consultant from an S/4HANA one.</p>
+
+    <div class="meta-row">
+      <div class="meta-chip"><span class="dot"></span>Job-ready in <b>4–6 months</b></div>
+      <div class="meta-chip"><span class="dot"></span>Core competence in <b>2–3 months</b></div>
+      <div class="meta-chip"><span class="dot"></span><b>6</b> phases</div>
+      <div class="meta-chip"><span class="dot"></span>ECC support ends <b>2027</b></div>
+    </div>
+
+    <div class="rail-wrap">
+      <div class="rail-track" id="railTrack">
+        <div class="rail-line"><div class="rail-line-fill" id="railFill"></div></div>
+        <!-- rail nodes injected by JS -->
+      </div>
+    </div>
+
+    <div class="progress-strip">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">0 / 0 milestones</div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="sidebar" id="sidebar">
+      <div class="side-title">Roadmap</div>
+      <!-- phase links injected -->
+      <div class="side-divider"></div>
+      <div class="side-title">Deep Layer</div>
+      <a class="side-link" href="#lens" data-target="lens">Architecture Lens<small>ECC/S4</small></a>
+      <a class="side-link" href="#deep" data-target="deep">MATDOC · ML · SQL<small>tech</small></a>
+    </nav>
+
+    <main class="content" id="content">
+      <!-- phases injected -->
+
+      <section class="phase" id="lens">
+        <div class="section-heading">
+          <div class="eyebrow">Deep Synthesis</div>
+          <h2>The architecture lens</h2>
+          <p>Same business process, two very different engines underneath. Toggle to see what changes when a landscape moves from ECC to S/4HANA — this is the differentiator knowledge that migration and technical consultants are hired for.</p>
+        </div>
+
+        <div class="lens-panel" id="lensPanel" data-lens="ecc">
+          <div class="lens-switch">
+            <button class="active" data-lens="ecc" id="btnEcc">CLASSIC · ECC</button>
+            <button data-lens="s4" id="btnS4">SIMPLIFIED · S/4HANA</button>
+          </div>
+          <div class="lens-grid" id="lensGrid"></div>
+        </div>
+      </section>
+
+      <section class="phase" id="deep">
+        <div class="section-heading">
+          <div class="eyebrow">Technical Floor</div>
+          <h2>MATDOC, Material Ledger &amp; SQL for SAP</h2>
+          <p>The layer underneath the transactions — where reporting, migration remediation, and real differentiation happen.</p>
+        </div>
+        <div class="tech-grid" id="techGrid"></div>
+
+        <div class="perspectives" id="perspectives"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <footer>
+    <span>Synthesized from SAP Learning Journeys, SAP Help Portal, SAP Community &amp; independent migration analyses (2025–2026)</span>
+    <span id="saveState">progress saved locally</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+
+  const phases = [
+    {
+      id:'phase-0', num:'00', label:'Foundations', title:'Foundations', time:'2–4 weeks',
+      desc:'S/4HANA overview vs ECC architecture, HANA in-memory columnar database, Fiori vs GUI, organizational elements, and end-to-end logistics flows. Parallel ECC study of classic transactions helps later contrast.',
+      codes:['S4H00 overview','SAP Learning Journeys (free)'],
+      items:[
+        'Map S/4HANA vs ECC architecture at a high level',
+        'Understand HANA in-memory columnar storage vs classic RDBMS',
+        'Compare Fiori Launchpad navigation to SAP GUI',
+        'Learn org elements: Company Code, Plant, Storage Location',
+        'Learn org elements: Sales Org, Distribution Channel, Division, Shipping Point',
+        'Walk an end-to-end P2P and O2C flow at a conceptual level'
+      ]
+    },
+    {
+      id:'phase-1', num:'01', label:'Material Master', title:'Material Master', time:'3–6 weeks',
+      desc:'The central logistical object shared by both MM and SD. Creation, extension, views, material types, valuation class, price control, and the ECC → S/4HANA field changes that break custom code.',
+      codes:['MM01 / MM02 / MM03','Manage Product Master Data (Fiori)'],
+      items:[
+        'Create and extend materials (MM01/MM02/MM03 and Fiori equivalent)',
+        'Work through views: Basic Data, Purchasing, MRP, Accounting/Costing, Sales, Warehouse, QM',
+        'Understand material types, units of measure, valuation class',
+        'Understand price control (S vs V) and its downstream impact',
+        'Note the 18→40 character material number extension and custom-code impact',
+        'Practice mass maintenance (MM17) and assess data-quality impact on downstream processes'
+      ]
+    },
+    {
+      id:'phase-2', num:'02', label:'MM / Procurement', title:'MM · Sourcing &amp; Procurement', time:'6–10 weeks',
+      desc:'The full Purchase-to-Pay cycle plus the logistics that move material from supplier to plant — and where it hands off to PP, WM/EWM, FI, and QM.',
+      codes:['S4500','S4520 / S4550','C_TS452'],
+      items:[
+        'Requirement determination → source determination (info records, source lists, quota arrangements)',
+        'Purchase Requisition → RFQ/Quotation → PO / Contract / Scheduling Agreement',
+        'Goods Receipt → Invoice Verification → Payment',
+        'Inventory management: goods movements, stock types, physical inventory',
+        'Special procurement: stock transport orders, subcontracting, consignment, third-party',
+        'Trace integration points into PP (MRP), WM/EWM, FI (GR/IR), and QM',
+        'Practice classic transactions (ME21N, MIGO) alongside their Fiori apps'
+      ]
+    },
+    {
+      id:'phase-3', num:'03', label:'SD / Sales', title:'SD · Sales &amp; Distribution', time:'6–10 weeks',
+      desc:'The Order-to-Cash cycle, pricing, credit, and the shipping/logistics layer that pulls stock straight from MM.',
+      codes:['S4600 series','C_TS462'],
+      items:[
+        'Inquiry/Quotation → Sales Order → Availability check (ATP / Advanced ATP)',
+        'Delivery → Picking/Packing/Shipping → Billing',
+        'Pricing via the condition technique; credit management basics',
+        'Output determination, returns, free-of-charge processes',
+        'Trace shipping point determination and delivery relevance back to MM stock',
+        'Practice VA01 / VL01N / VF01 alongside Fiori Sales apps'
+      ]
+    },
+    {
+      id:'phase-4', num:'04', label:'Integration', title:'Cross-Module Integration &amp; Configuration', time:'ongoing',
+      desc:'Where MM and SD actually meet: sales views on the material master, org-structure dependencies, account determination, and project-level configuration skills.',
+      codes:['SPRO / IMG','Release strategies'],
+      items:[
+        'Connect Material Master sales views to available-stock logic',
+        'Map org-structure dependencies across MM and SD',
+        'Understand account determination and output/workflow triggers',
+        'Practice configuration in IMG / SPRO and pricing procedures',
+        'Run ticket-style simulations across both modules',
+        'Build brownfield-conversion awareness (what breaks in a real migration)'
+      ]
+    },
+    {
+      id:'phase-5', num:'05', label:'Technical Layer', title:'Deep Technical Layer', time:'parallel or after',
+      desc:'The differentiator: MATDOC, Material Ledger, Open SQL/CDS, and clean-core extension patterns. This is what separates a functional consultant from a migration or technical one.',
+      codes:['HA400-style ABAP on HANA','CDS deep-dive'],
+      items:[
+        'Understand MATDOC as the single source of truth for material documents',
+        'Learn how classic tables (MARD/MARC/MBEW) are now compatibility views',
+        'Understand Material Ledger as the mandatory valuation subledger',
+        'Learn the Actual Costing cycle (CKMLCP) if going technical-deep',
+        'Learn Open SQL fundamentals inside ABAP programs',
+        'Learn CDS views: associations, annotations, currency/unit conversion',
+        'Query MATDOC and material-master compatibility tables directly'
+      ]
+    },
+  ];
+
+  const lensData = {
+    ecc:[
+      {h:'Inventory Data Model', b:'<code>MKPF</code> (header) + <code>MSEG</code> (items) hold every material movement. Stock quantities persist in <code>MARD</code>, <code>MARC</code>, <code>MBEW</code>. Reporting means <b>multi-table joins</b> and periodic reconciliation.'},
+      {h:'Valuation Engine', b:'Material Ledger is <b>optional</b> — activated only for selected plants or where multi-currency valuation is actually needed.'},
+      {h:'Master Data', b:'Vendors and customers live in separate master objects (<code>XK01</code> / <code>XD01</code>), maintained independently.'},
+      {h:'SD Pricing &amp; Status', b:'Pricing conditions sit in the <code>KONV</code> cluster table. Header/item status live separately in <code>VBUK</code> / <code>VBUP</code>.'},
+      {h:'Transactions &amp; UI', b:'SAP GUI transaction codes, index tables, and LIS aggregates. Many discrete <code>MB*</code> codes for individual goods-movement types.'},
+    ],
+    s4:[
+      {h:'Inventory Data Model', b:'<code>MATDOC</code> is the single source of truth — header + item combined. Stock is <b>calculated on the fly</b> via CDS views; a <code>RecordType</code> field distinguishes document qualities. Old table names survive as compatibility views.'},
+      {h:'Valuation Engine', b:'Material Ledger is <b>mandatory</b> for every material/plant, feeding the Universal Journal (<code>ACDOCA</code>) directly. Actual Costing via <code>CKMLCP</code> stays optional — and once ML is active, it <b>cannot be deactivated</b>.'},
+      {h:'Master Data', b:'Vendor and customer masters converge into a mandatory <b>Business Partner</b> (<code>BP</code>) with roles. Customer-Vendor Integration (<b>CVI</b>) is required during conversion.'},
+      {h:'SD Pricing &amp; Status', b:'Pricing moves to the transparent <code>PRCD_ELEMENTS</code> table. Status is folded directly into <code>VBAK</code>/<code>VBAP</code>, <code>LIKP</code>/<code>LIPS</code>, <code>VBRK</code>.'},
+      {h:'Transactions &amp; UI', b:'Fiori role-based apps, embedded analytics, MRP Live. <code>MIGO</code> absorbs most goods-movement variants; performance work shifts from index tuning to CDS/code push-down.'},
+    ]
+  };
+
+  const techCards = [
+    { title:'MATDOC', icon:'M4 6h16M4 12h16M4 18h10', flow:'Movement → MATDOC (single record) → MATDOC_EXTRACT → CDS aggregation → live stock',
+      body:['Stores every goods movement — receipt, issue, transfer — as one authoritative, document-level record.',
+            'Classic stock views (MARD/MARC/MBEW) become <b>virtual, calculated</b> rather than persisted.',
+            'Volumes can reach billions of rows, which is why archiving and lifecycle management stop being optional.']},
+    { title:'Material Ledger', icon:'M6 4h12v16H6zM9 8h6M9 12h6M9 16h4', flow:'Movements + price/FX/production variance → ML → ACDOCA (Universal Journal)',
+      body:['The mandatory valuation subledger — collects price differences, exchange-rate differences, and production variances.',
+            'With Actual Costing on, period-end <code>CKMLCP</code> computes a Periodic Unit Price and revalues inventory and consumption.',
+            'Currency/valuation types must be explicitly defined in configuration before go-live.']},
+    { title:'SQL for SAP', icon:'M4 4h16v4H4zM4 10h10v4H4zM4 16h14v4H4', flow:'Open SQL (ABAP) → CDS Views (DDL, push-down) → AMDP / Native SQL when needed',
+      body:['Open SQL is database-independent and remains the primary language inside ABAP programs.',
+            'CDS views are the preferred modeling layer — associations instead of joins, annotations, and push-down execution to HANA.',
+            'Classic SQL skills transfer well with syntax adaptation; HANA SQLScript is secondary for most MM/SD consultants.']},
+  ];
+
+  const perspectives = [
+    {tag:'FUNCTIONAL', text:'Emphasizes process continuity and Fiori/Business Partner adoption over deep table-level change.'},
+    {tag:'TECHNICAL / MIGRATION', text:'Stresses data-model remediation, clean-core principles, and the risk of unaddressed custom code.'},
+    {tag:'JOB MARKET (2025–26)', text:'Sustained demand for dual ECC + S/4 knowledge while migrations are still in flight.'},
+  ];
+
+  // ---------- render phases ----------
+  const content = document.getElementById('content');
+  const deepSection = document.getElementById('deep').parentElement ? null : null;
+  const deepNode = document.getElementById('deep');
+
+  phases.forEach(p=>{
+    const sec = document.createElement('section');
+    sec.className = 'phase';
+    sec.id = p.id;
+    sec.innerHTML = `
+      <div class="phase-head">
+        <div>
+          <div class="phase-kicker">PHASE ${p.num}</div>
+          <div class="phase-title">${p.title}</div>
+        </div>
+        <div class="phase-time">${p.time}</div>
+      </div>
+      <p class="phase-desc">${p.desc}</p>
+      <div class="codes-row">${p.codes.map(c=>`<span class="code-tag">${c}</span>`).join('')}</div>
+      <div class="checklist" data-phase="${p.id}">
+        ${p.items.map((it,i)=>`
+          <div class="check-item" data-phase="${p.id}" data-idx="${i}">
+            <div class="check-box"></div>
+            <span class="label">${it}</span>
+          </div>`).join('')}
+      </div>
+    `;
+    content.insertBefore(sec, document.getElementById('lens'));
+  });
+
+  // ---------- render sidebar links ----------
+  const sidebar = document.getElementById('sidebar');
+  phases.forEach(p=>{
+    const a = document.createElement('a');
+    a.className='side-link'; a.href='#'+p.id; a.dataset.target=p.id;
+    a.innerHTML = `${p.label}<small>${p.num}</small>`;
+    sidebar.insertBefore(a, sidebar.querySelector('.side-divider'));
+  });
+
+  // ---------- render rail ----------
+  const railTrack = document.getElementById('railTrack');
+  phases.forEach((p,i)=>{
+    const btn = document.createElement('button');
+    btn.className='rail-node'; btn.dataset.target=p.id;
+    btn.innerHTML = `<div class="rail-dot"><span>${p.num}</span></div><div class="rail-label">${p.label}</div>`;
+    railTrack.appendChild(btn);
+  });
+
+  // ---------- render lens grid ----------
+  const lensGrid = document.getElementById('lensGrid');
+  function renderLens(mode){
+    lensGrid.innerHTML = lensData[mode].map(c=>`
+      <div class="lens-card"><h4>${c.h}</h4><p>${c.b}</p></div>
+    `).join('');
+  }
+  renderLens('ecc');
+  document.getElementById('btnEcc').addEventListener('click',()=>{
+    document.getElementById('lensPanel').dataset.lens='ecc';
+    document.getElementById('btnEcc').classList.add('active');
+    document.getElementById('btnS4').classList.remove('active','s4');
+    renderLens('ecc');
+  });
+  document.getElementById('btnS4').addEventListener('click',()=>{
+    document.getElementById('lensPanel').dataset.lens='s4';
+    document.getElementById('btnS4').classList.add('active','s4');
+    document.getElementById('btnEcc').classList.remove('active');
+    renderLens('s4');
+  });
+
+  // ---------- render tech cards ----------
+  const techGrid = document.getElementById('techGrid');
+  techGrid.innerHTML = techCards.map(t=>`
+    <div class="tech-card">
+      <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round"><path d="${t.icon}"/></svg>
+      <h3>${t.title}</h3>
+      ${t.body.map(b=>`<p>${b}</p>`).join('')}
+      <div class="flow">${t.flow}</div>
+    </div>
+  `).join('');
+
+  // ---------- render perspective chips ----------
+  document.getElementById('perspectives').innerHTML = perspectives.map(p=>`
+    <div class="persp-chip"><span class="persp-tag">${p.tag}</span><span>${p.text}</span></div>
+  `).join('');
+
+  // ---------- progress state ----------
+  const STORAGE_KEY = 'sap-mm-sd-roadmap-progress';
+  let checkedState = {};
+
+  function allItemKeys(){
+    const keys=[];
+    phases.forEach(p=>p.items.forEach((_,i)=>keys.push(p.id+'::'+i)));
+    return keys;
+  }
+
+  function computeProgress(){
+    const keys = allItemKeys();
+    const done = keys.filter(k=>checkedState[k]).length;
+    document.getElementById('progressText').textContent = done+' / '+keys.length+' milestones';
+    document.getElementById('progressFill').style.width = (keys.length? (done/keys.length*100):0)+'%';
+
+    // per-phase completion for rail + fill
+    let completeCount = 0;
+    phases.forEach((p,i)=>{
+      const total = p.items.length;
+      const doneP = p.items.filter((_,idx)=>checkedState[p.id+'::'+idx]).length;
+      const node = document.querySelectorAll('.rail-node')[i];
+      if(doneP===total && total>0){ node.classList.add('complete'); completeCount++; }
+      else { node.classList.remove('complete'); }
+    });
+    document.getElementById('railFill').style.width = (phases.length? (completeCount/phases.length*100):0)+'%';
+  }
+
+  function applyCheckedDOM(){
+    document.querySelectorAll('.check-item').forEach(el=>{
+      const key = el.dataset.phase+'::'+el.dataset.idx;
+      el.classList.toggle('checked', !!checkedState[key]);
+    });
+    computeProgress();
+  }
+
+  async function loadProgress(){
+    try{
+      const res = await window.storage.get(STORAGE_KEY, false);
+      if(res && res.value){
+        checkedState = JSON.parse(res.value);
+      }
+    }catch(e){
+      checkedState = {};
+    }
+    applyCheckedDOM();
+  }
+
+  async function saveProgress(){
+    const label = document.getElementById('saveState');
+    try{
+      await window.storage.set(STORAGE_KEY, JSON.stringify(checkedState), false);
+      label.textContent = 'progress saved';
+    }catch(e){
+      label.textContent = 'progress kept for this session only';
+    }
+  }
+
+  content.addEventListener('click', (e)=>{
+    const item = e.target.closest('.check-item');
+    if(!item) return;
+    const key = item.dataset.phase+'::'+item.dataset.idx;
+    checkedState[key] = !checkedState[key];
+    applyCheckedDOM();
+    saveProgress();
+  });
+
+  loadProgress();
+
+  // ---------- nav: rail + sidebar highlighting, click-to-scroll ----------
+  const railNodes = Array.from(document.querySelectorAll('.rail-node'));
+  const sideLinks = Array.from(document.querySelectorAll('.side-link'));
+
+  function goTo(id){
+    const el = document.getElementById(id);
+    if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+  railNodes.forEach(n=> n.addEventListener('click', ()=>goTo(n.dataset.target)));
+  sideLinks.forEach(n=> n.addEventListener('click', (e)=>{ e.preventDefault(); goTo(n.dataset.target); }));
+
+  const allSectionIds = phases.map(p=>p.id).concat(['lens','deep']);
+  const observer = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        const id = entry.target.id;
+        railNodes.forEach(n=> n.classList.toggle('active', n.dataset.target===id));
+        sideLinks.forEach(n=> n.classList.toggle('current', n.dataset.target===id));
+      }
+    });
+  }, { rootMargin:'-20% 0px -65% 0px', threshold:0 });
+
+  allSectionIds.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) observer.observe(el);
+  });
+
+})();
+</script>
+</body>
+</html>
