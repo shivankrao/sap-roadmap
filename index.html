@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAP MM/SD Roadmap — Material Flow to Material Ledger</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --bg: #0d1826;
+    --bg-alt: #0a1320;
+    --panel: #142238;
+    --panel-2: #182842;
+    --hairline: rgba(210,224,242,0.09);
+    --hairline-strong: rgba(210,224,242,0.16);
+    --text: #eef1f6;
+    --text-dim: #9fb0c7;
+    --text-faint: #6b7d97;
+    --gold: #d8ae5e;
+    --gold-dim: rgba(216,174,94,0.16);
+    --cyan: #57c2d6;
+    --cyan-dim: rgba(87,194,214,0.14);
+    --green: #7bcf9e;
+    --green-dim: rgba(123,207,158,0.16);
+    --radius: 10px;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1100px 600px at 15% -10%, rgba(87,194,214,0.08), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(216,174,94,0.06), transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+
+  ::selection{ background: var(--gold-dim); color:var(--text); }
+
+  /* ---------- layout shell ---------- */
+  .app{ max-width:1400px; margin:0 auto; padding:0 28px 80px; }
+
+  /* ---------- hero ---------- */
+  .hero{ padding:56px 0 28px; border-bottom:1px solid var(--hairline); }
+  .eyebrow{
+    font-family:var(--font-mono); font-size:12px; letter-spacing:0.14em; text-transform:uppercase;
+    color:var(--cyan); display:flex; align-items:center; gap:10px; margin-bottom:18px;
+  }
+  .eyebrow::before{ content:''; width:18px; height:1px; background:var(--cyan); display:inline-block; }
+  h1{
+    font-family:var(--font-display); font-weight:700; font-size:clamp(32px,4.4vw,54px);
+    line-height:1.05; margin:0 0 16px; letter-spacing:-0.01em;
+  }
+  h1 span{ color:var(--gold); }
+  .hero-sub{ max-width:680px; color:var(--text-dim); font-size:16px; line-height:1.65; margin:0 0 32px; }
+
+  .meta-row{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:36px; }
+  .meta-chip{
+    font-family:var(--font-mono); font-size:11.5px; color:var(--text-dim);
+    border:1px solid var(--hairline-strong); border-radius:999px; padding:6px 13px;
+    display:flex; align-items:center; gap:7px;
+  }
+  .meta-chip b{ color:var(--text); font-weight:600; }
+  .dot{ width:6px; height:6px; border-radius:50%; background:var(--gold); }
+
+  /* ---------- pipeline rail (signature element) ---------- */
+  .rail-wrap{ position:relative; padding:6px 0 4px; }
+  .rail-track{
+    position:relative; display:flex; justify-content:space-between; align-items:flex-start;
+    padding-top:4px;
+  }
+  .rail-line{
+    position:absolute; top:19px; left:19px; right:19px; height:2px;
+    background:linear-gradient(90deg, var(--hairline-strong), var(--hairline-strong));
+    z-index:0;
+  }
+  .rail-line-fill{
+    position:absolute; top:0; left:0; height:100%; width:0%;
+    background:linear-gradient(90deg, var(--gold), var(--cyan));
+    transition:width .5s ease;
+  }
+  .rail-node{
+    position:relative; z-index:1; display:flex; flex-direction:column; align-items:center;
+    gap:10px; background:none; border:none; cursor:pointer; padding:0; flex:1;
+    font-family:var(--font-body);
+  }
+  .rail-dot{
+    width:38px; height:38px; border-radius:50%; background:var(--panel);
+    border:2px solid var(--hairline-strong); display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); font-size:13px; color:var(--text-dim); transition:all .25s ease;
+  }
+  .rail-node.active .rail-dot{
+    border-color:var(--gold); color:var(--gold); box-shadow:0 0 0 5px var(--gold-dim);
+  }
+  .rail-node.complete .rail-dot{
+    background:var(--green-dim); border-color:var(--green); color:var(--green);
+  }
+  .rail-node.complete .rail-dot::after{ content:'✓'; }
+  .rail-node.complete .rail-dot span{ display:none; }
+  .rail-label{
+    font-size:11.5px; color:var(--text-faint); text-align:center; max-width:92px; line-height:1.3;
+    transition:color .2s ease;
+  }
+  .rail-node.active .rail-label{ color:var(--text); }
+  .rail-node:hover .rail-label{ color:var(--text); }
+
+  /* ---------- overall progress ---------- */
+  .progress-strip{ display:flex; align-items:center; gap:14px; margin-top:26px; }
+  .progress-bar{ flex:1; height:6px; border-radius:99px; background:var(--panel-2); overflow:hidden; border:1px solid var(--hairline); }
+  .progress-fill{ height:100%; width:0%; background:linear-gradient(90deg, var(--gold), var(--cyan)); transition:width .4s ease; }
+  .progress-text{ font-family:var(--font-mono); font-size:12px; color:var(--text-dim); white-space:nowrap; }
+
+  /* ---------- main two-col layout ---------- */
+  .layout{ display:grid; grid-template-columns:230px 1fr; gap:44px; margin-top:44px; align-items:start; }
+  .sidebar{ position:sticky; top:24px; display:flex; flex-direction:column; gap:2px; }
+  .side-title{ font-family:var(--font-mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--text-faint); margin:0 0 10px; }
+  .side-link{
+    font-size:13.5px; color:var(--text-dim); text-decoration:none; padding:9px 12px; border-radius:8px;
+    border-left:2px solid transparent; transition:all .15s ease; display:flex; justify-content:space-between; gap:8px;
+  }
+  .side-link:hover{ background:var(--panel); color:var(--text); }
+  .side-link.current{ border-left-color:var(--gold); color:var(--text); background:var(--panel); }
+  .side-link small{ font-family:var(--font-mono); color:var(--text-faint); }
+  .side-divider{ height:1px; background:var(--hairline); margin:16px 0; }
+
+  /* ---------- content ---------- */
+  .content{ display:flex; flex-direction:column; gap:22px; }
+
+  .phase{
+    background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius);
+    padding:30px 32px; scroll-margin-top:24px;
+  }
+  .phase-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:20px; flex-wrap:wrap; margin-bottom:6px; }
+  .phase-kicker{ font-family:var(--font-mono); font-size:12px; color:var(--gold); letter-spacing:.08em; }
+  .phase-title{ font-family:var(--font-display); font-size:24px; font-weight:600; margin:4px 0 10px; }
+  .phase-time{
+    font-family:var(--font-mono); font-size:11.5px; color:var(--cyan); border:1px solid rgba(87,194,214,0.35);
+    background:var(--cyan-dim); padding:5px 11px; border-radius:999px; white-space:nowrap; height:fit-content;
+  }
+  .phase-desc{ color:var(--text-dim); font-size:14.5px; line-height:1.7; margin:0 0 20px; max-width:78ch; }
+  .phase-desc code, .inline-code{
+    font-family:var(--font-mono); font-size:0.92em; color:var(--gold); background:rgba(216,174,94,0.08);
+    padding:1px 5px; border-radius:4px;
+  }
+
+  .codes-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px; }
+  .code-tag{
+    font-family:var(--font-mono); font-size:11px; color:var(--text-dim); border:1px dashed var(--hairline-strong);
+    padding:4px 9px; border-radius:6px;
+  }
+
+  .checklist{ display:flex; flex-direction:column; gap:2px; border-top:1px solid var(--hairline); padding-top:16px; }
+  .check-item{ display:flex; align-items:flex-start; gap:12px; padding:9px 6px; border-radius:8px; cursor:pointer; transition:background .15s ease; }
+  .check-item:hover{ background:var(--panel-2); }
+  .check-box{
+    width:17px; height:17px; border-radius:5px; border:1.5px solid var(--hairline-strong); flex:none; margin-top:2px;
+    display:flex; align-items:center; justify-content:center; transition:all .15s ease; background:var(--bg-alt);
+  }
+  .check-item.checked .check-box{ background:var(--green); border-color:var(--green); }
+  .check-item.checked .check-box::after{ content:'✓'; font-size:11px; color:#08130c; font-weight:700; }
+  .check-item span.label{ font-size:13.5px; color:var(--text-dim); line-height:1.5; transition:color .15s ease; }
+  .check-item.checked span.label{ color:var(--text-faint); text-decoration:line-through; text-decoration-color:var(--hairline-strong); }
+
+  /* ---------- deep dive section ---------- */
+  .section-heading{ margin:8px 0 4px; }
+  .section-heading .eyebrow{ margin-bottom:10px; }
+  .section-heading h2{ font-family:var(--font-display); font-size:26px; margin:0 0 10px; }
+  .section-heading p{ color:var(--text-dim); font-size:14.5px; max-width:74ch; line-height:1.7; margin:0 0 26px;}
+
+  /* lens toggle */
+  .lens-panel{ background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius); padding:28px 30px; }
+  .lens-switch{ display:inline-flex; border:1px solid var(--hairline-strong); border-radius:999px; padding:3px; margin-bottom:22px; }
+  .lens-switch button{
+    font-family:var(--font-mono); font-size:12px; letter-spacing:.03em; padding:8px 18px; border-radius:999px;
+    border:none; background:transparent; color:var(--text-dim); cursor:pointer; transition:all .2s ease;
+  }
+  .lens-switch button.active{ background:var(--gold); color:#241a08; font-weight:600; }
+  .lens-switch button.active.s4{ background:var(--cyan); color:#062227; }
+
+  .lens-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(230px,1fr)); gap:14px; }
+  .lens-card{ border:1px solid var(--hairline); border-radius:9px; padding:18px 18px; background:var(--panel-2); }
+  .lens-card h4{ margin:0 0 10px; font-size:13.5px; font-family:var(--font-mono); color:var(--text-faint); letter-spacing:.03em; text-transform:uppercase; }
+  .lens-card p{ margin:0; font-size:13.5px; color:var(--text-dim); line-height:1.6; }
+  .lens-card p b{ color:var(--text); font-weight:600; }
+  .lens-card code{ font-family:var(--font-mono); color:var(--gold); background:rgba(216,174,94,0.08); padding:1px 5px; border-radius:4px; font-size:.92em; }
+  .lens-panel[data-lens="s4"] .lens-card code{ color:var(--cyan); background:rgba(87,194,214,0.09); }
+
+  /* deep technical cards */
+  .tech-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:18px; margin-top:18px; }
+  .tech-card{ background:var(--panel); border:1px solid var(--hairline); border-radius:var(--radius); padding:26px 26px; }
+  .tech-icon{ width:38px; height:38px; margin-bottom:16px; }
+  .tech-card h3{ font-family:var(--font-display); font-size:18px; margin:0 0 10px; }
+  .tech-card p{ font-size:13.5px; color:var(--text-dim); line-height:1.65; margin:0 0 12px; }
+  .tech-card p:last-child{ margin-bottom:0; }
+  .tech-card .flow{ font-family:var(--font-mono); font-size:12px; color:var(--gold); background:rgba(216,174,94,0.07); border:1px solid var(--hairline); border-radius:7px; padding:10px 12px; line-height:1.7; margin-top:12px;}
+
+  /* perspective chips */
+  .perspectives{ display:flex; flex-wrap:wrap; gap:10px; margin-top:26px; }
+  .persp-chip{
+    display:flex; gap:9px; align-items:flex-start; font-size:12.5px; color:var(--text-dim);
+    border:1px solid var(--hairline); border-radius:8px; padding:10px 13px; max-width:270px; line-height:1.55;
+  }
+  .persp-chip .persp-tag{ font-family:var(--font-mono); color:var(--gold); flex:none; font-size:11px; padding-top:1px; }
+
+  footer{ margin-top:60px; padding-top:24px; border-top:1px solid var(--hairline); color:var(--text-faint); font-size:12px; font-family:var(--font-mono); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+
+  /* ---------- resource attachments on checklist lines ---------- */
+  .check-row{ display:flex; flex-direction:column; }
+  .item-resources{ margin:0 0 4px 35px; display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+  .attach-btn{
+    display:inline-flex; align-items:center; gap:6px; font-family:var(--font-mono); font-size:11px;
+    color:var(--text-faint); background:transparent; border:1px dashed var(--hairline-strong); border-radius:7px;
+    padding:5px 10px; cursor:pointer; transition:all .15s ease;
+  }
+  .attach-btn:hover{ color:var(--cyan); border-color:var(--cyan); background:var(--cyan-dim); }
+  .attach-btn svg{ width:12px; height:12px; }
+
+  .resource-chips{ display:flex; flex-wrap:wrap; gap:8px; }
+  .resource-chip{
+    display:flex; align-items:center; gap:7px; font-size:12px; color:var(--text-dim);
+    background:var(--panel-2); border:1px solid var(--hairline-strong); border-radius:7px;
+    padding:5px 6px 5px 9px; cursor:pointer; transition:all .15s ease; max-width:220px;
+  }
+  .resource-chip:hover{ border-color:var(--gold); color:var(--text); }
+  .resource-chip svg{ width:13px; height:13px; flex:none; color:var(--gold); }
+  .resource-chip .chip-name{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .resource-chip .chip-delete{
+    flex:none; border:none; background:transparent; color:var(--text-faint); font-size:14px; line-height:1;
+    cursor:pointer; padding:2px 4px; border-radius:5px;
+  }
+  .resource-chip .chip-delete:hover{ color:#e07272; background:rgba(224,114,114,0.12); }
+
+  /* ---------- resources tab / section ---------- */
+  .resource-banner{
+    display:flex; gap:12px; align-items:flex-start; background:var(--cyan-dim); border:1px solid rgba(87,194,214,0.3);
+    border-radius:9px; padding:14px 16px; margin-bottom:24px; font-size:12.5px; color:var(--text-dim); line-height:1.6;
+  }
+  .resource-banner svg{ width:16px; height:16px; flex:none; margin-top:1px; color:var(--cyan); }
+  .resource-banner.offline{ background:var(--gold-dim); border-color:rgba(216,174,94,0.35); }
+  .resource-banner.offline svg{ color:var(--gold); }
+
+  .res-phase-group{ margin-bottom:22px; }
+  .res-phase-group:last-child{ margin-bottom:0; }
+  .res-phase-label{ font-family:var(--font-mono); font-size:11.5px; color:var(--gold); letter-spacing:.06em; text-transform:uppercase; margin-bottom:10px; }
+  .res-item-block{ border-top:1px solid var(--hairline); padding:12px 0; }
+  .res-item-block:first-child{ border-top:none; padding-top:0; }
+  .res-item-label{ font-size:13px; color:var(--text); margin-bottom:9px; line-height:1.5; }
+  .res-empty{ color:var(--text-faint); font-size:13.5px; padding:30px 0; text-align:center; border:1px dashed var(--hairline-strong); border-radius:9px; }
+  #resCount{ font-family:var(--font-mono); font-size:10px; background:var(--gold-dim); color:var(--gold); border-radius:99px; padding:2px 7px; margin-left:6px; }
+
+  .res-head-row{ display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:20px; }
+  .icon-btn{
+    display:inline-flex; align-items:center; gap:7px; font-family:var(--font-mono); font-size:11.5px; color:var(--text-dim);
+    border:1px solid var(--hairline-strong); background:transparent; border-radius:8px; padding:7px 13px; cursor:pointer;
+    transition:all .15s ease; flex:none;
+  }
+  .icon-btn:hover{ color:var(--text); border-color:var(--cyan); }
+  .icon-btn svg{ width:14px; height:14px; }
+
+  .link-btn{ background:none; border:none; padding:0; color:var(--cyan); text-decoration:underline; font:inherit; cursor:pointer; }
+  .link-btn:hover{ color:var(--text); }
+
+  .form-row{ margin-bottom:16px; }
+  .form-row label{ display:block; font-family:var(--font-mono); font-size:11.5px; color:var(--text-faint); letter-spacing:.04em; text-transform:uppercase; margin-bottom:7px; }
+  .form-row input{
+    width:100%; background:var(--bg-alt); border:1px solid var(--hairline-strong); border-radius:8px; color:var(--text);
+    font-family:var(--font-body); font-size:14px; padding:10px 12px; outline:none; transition:border-color .15s ease;
+  }
+  .form-row input:focus{ border-color:var(--cyan); }
+  .form-hint{ font-size:12px; color:var(--text-faint); margin-top:6px; line-height:1.5; }
+  .form-hint a{ color:var(--cyan); }
+  .form-actions{ display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:22px; }
+  .btn-primary{
+    font-family:var(--font-mono); font-size:12.5px; background:var(--gold); color:#241a08; border:none; border-radius:8px;
+    padding:10px 20px; cursor:pointer; font-weight:600;
+  }
+  .btn-primary:hover{ filter:brightness(1.08); }
+  .btn-ghost{
+    font-family:var(--font-mono); font-size:12px; background:transparent; color:var(--text-faint); border:1px solid var(--hairline-strong);
+    border-radius:8px; padding:9px 14px; cursor:pointer;
+  }
+  .btn-ghost:hover{ color:#e07272; border-color:#e07272; }
+
+  /* ---------- PDF viewer modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(6,11,20,0.82); backdrop-filter:blur(2px);
+    display:none; align-items:center; justify-content:center; z-index:50; padding:26px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal-box{
+    width:100%; max-width:980px; height:88vh; background:var(--panel); border:1px solid var(--hairline-strong);
+    border-radius:12px; display:flex; flex-direction:column; overflow:hidden;
+  }
+  .modal-head{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 18px; border-bottom:1px solid var(--hairline); }
+  .modal-title{ font-family:var(--font-mono); font-size:12.5px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .modal-actions{ display:flex; gap:8px; flex:none; }
+  .modal-actions a, .modal-actions button{
+    font-family:var(--font-mono); font-size:11px; color:var(--text-dim); border:1px solid var(--hairline-strong);
+    background:transparent; border-radius:7px; padding:6px 11px; cursor:pointer; text-decoration:none; transition:all .15s ease;
+  }
+  .modal-actions a:hover, .modal-actions button:hover{ color:var(--text); border-color:var(--cyan); }
+  .modal-body{ flex:1; background:#0a0f18; }
+  .modal-body iframe{ width:100%; height:100%; border:none; }
+
+  /* mobile */
+  @media (max-width: 880px){
+    .layout{ grid-template-columns:1fr; }
+    .sidebar{ position:static; flex-direction:row; flex-wrap:wrap; }
+    .side-link{ border-left:none; border-bottom:2px solid transparent; }
+    .side-link.current{ border-bottom-color:var(--gold); border-left-color:transparent; }
+    .rail-label{ display:none; }
+    .rail-track{ padding:0 4px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="hero">
+    <div class="eyebrow">Consulting Track · MM / SD · ECC → S/4HANA</div>
+    <h1>The material stays the same.<br>The <span>ledger underneath it doesn't.</span></h1>
+    <p class="hero-sub">A phased route through SAP Material Master, Sourcing &amp; Procurement (MM), and Sales &amp; Distribution (SD) — with the data model, MATDOC, and Material Ledger changes that separate an ECC consultant from an S/4HANA one.</p>
+
+    <div class="meta-row">
+      <div class="meta-chip"><span class="dot"></span>Job-ready in <b>4–6 months</b></div>
+      <div class="meta-chip"><span class="dot"></span>Core competence in <b>2–3 months</b></div>
+      <div class="meta-chip"><span class="dot"></span><b>6</b> phases</div>
+      <div class="meta-chip"><span class="dot"></span>ECC support ends <b>2027</b></div>
+    </div>
+
+    <div class="rail-wrap">
+      <div class="rail-track" id="railTrack">
+        <div class="rail-line"><div class="rail-line-fill" id="railFill"></div></div>
+        <!-- rail nodes injected by JS -->
+      </div>
+    </div>
+
+    <div class="progress-strip">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">0 / 0 milestones</div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="sidebar" id="sidebar">
+      <a class="side-link" href="#resources" data-target="resources">Resources<span id="resCount">0</span></a>
+      <div class="side-divider"></div>
+      <div class="side-title">Roadmap</div>
+      <!-- phase links injected -->
+      <div class="side-divider"></div>
+      <div class="side-title">Deep Layer</div>
+      <a class="side-link" href="#lens" data-target="lens">Architecture Lens<small>ECC/S4</small></a>
+      <a class="side-link" href="#deep" data-target="deep">MATDOC · ML · SQL<small>tech</small></a>
+    </nav>
+
+    <main class="content" id="content">
+
+      <section class="phase" id="resources">
+        <div class="res-head-row">
+          <div class="section-heading" style="margin:0;">
+            <div class="eyebrow">Your Library</div>
+            <h2>Resources</h2>
+            <p>Every PDF you attach to a checklist line uploads to your GitHub repo and collects here too, grouped by phase and topic.</p>
+          </div>
+          <button class="icon-btn" id="settingsBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06A2 2 0 1 1 7.04 4.29l.06.06A1.65 1.65 0 0 0 8.92 4.7a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.36.36.85.6 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            GitHub
+          </button>
+        </div>
+        <div id="resourceBanner"></div>
+        <div id="resourcesTabBody"></div>
+      </section>
+
+      <!-- phases injected -->
+
+      <section class="phase" id="lens">
+        <div class="section-heading">
+          <div class="eyebrow">Deep Synthesis</div>
+          <h2>The architecture lens</h2>
+          <p>Same business process, two very different engines underneath. Toggle to see what changes when a landscape moves from ECC to S/4HANA — this is the differentiator knowledge that migration and technical consultants are hired for.</p>
+        </div>
+
+        <div class="lens-panel" id="lensPanel" data-lens="ecc">
+          <div class="lens-switch">
+            <button class="active" data-lens="ecc" id="btnEcc">CLASSIC · ECC</button>
+            <button data-lens="s4" id="btnS4">SIMPLIFIED · S/4HANA</button>
+          </div>
+          <div class="lens-grid" id="lensGrid"></div>
+        </div>
+      </section>
+
+      <section class="phase" id="deep">
+        <div class="section-heading">
+          <div class="eyebrow">Technical Floor</div>
+          <h2>MATDOC, Material Ledger &amp; SQL for SAP</h2>
+          <p>The layer underneath the transactions — where reporting, migration remediation, and real differentiation happen.</p>
+        </div>
+        <div class="tech-grid" id="techGrid"></div>
+
+        <div class="perspectives" id="perspectives"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal-box" style="height:auto; max-width:480px;">
+      <div class="modal-head">
+        <div class="modal-title">Connect GitHub</div>
+        <div class="modal-actions"><button id="settingsClose" type="button">Close ✕</button></div>
+      </div>
+      <div style="padding:22px 24px;">
+        <form id="settingsForm">
+          <div class="form-row">
+            <label for="cfgOwner">Repo owner</label>
+            <input id="cfgOwner" type="text" placeholder="e.g. shivank" autocomplete="off" required>
+          </div>
+          <div class="form-row">
+            <label for="cfgRepo">Repo name</label>
+            <input id="cfgRepo" type="text" placeholder="e.g. sap-roadmap" autocomplete="off" required>
+          </div>
+          <div class="form-row">
+            <label for="cfgBranch">Branch</label>
+            <input id="cfgBranch" type="text" placeholder="main" autocomplete="off">
+          </div>
+          <div class="form-row">
+            <label for="cfgPrefix">Folder for uploads</label>
+            <input id="cfgPrefix" type="text" placeholder="resources" autocomplete="off">
+          </div>
+          <div class="form-row">
+            <label for="cfgToken">Personal access token (for uploading/deleting)</label>
+            <input id="cfgToken" type="password" placeholder="github_pat_..." autocomplete="off">
+            <div class="form-hint">
+              Create a <b>fine-grained token</b> at
+              <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a> —
+              scope it to just this repo, with <b>Contents: Read and write</b> permission. It's saved only in this browser and is sent only to api.github.com.
+              Leave blank to browse and view PDFs without the ability to upload or delete.
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn-ghost" id="cfgForgetToken">Forget saved token</button>
+            <button type="submit" class="btn-primary">Save &amp; connect</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="pdfModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <div class="modal-title" id="modalTitle">document.pdf</div>
+        <div class="modal-actions">
+          <a id="modalDownload" download>Download</a>
+          <a id="modalNewTab" target="_blank" rel="noopener">Open in new tab</a>
+          <button id="modalClose">Close ✕</button>
+        </div>
+      </div>
+      <div class="modal-body"><iframe id="modalFrame" src="about:blank"></iframe></div>
+    </div>
+  </div>
+
+  <footer>
+    <span>Synthesized from SAP Learning Journeys, SAP Help Portal, SAP Community &amp; independent migration analyses (2025–2026)</span>
+    <span id="saveState">progress saved locally</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+
+  const phases = [
+    {
+      id:'phase-0', num:'00', label:'Foundations', title:'Foundations', time:'2–4 weeks',
+      desc:'S/4HANA overview vs ECC architecture, HANA in-memory columnar database, Fiori vs GUI, organizational elements, and end-to-end logistics flows. Parallel ECC study of classic transactions helps later contrast.',
+      codes:['S4H00 overview','SAP Learning Journeys (free)'],
+      items:[
+        'Map S/4HANA vs ECC architecture at a high level',
+        'Understand HANA in-memory columnar storage vs classic RDBMS',
+        'Compare Fiori Launchpad navigation to SAP GUI',
+        'Learn org elements: Company Code, Plant, Storage Location',
+        'Learn org elements: Sales Org, Distribution Channel, Division, Shipping Point',
+        'Walk an end-to-end P2P and O2C flow at a conceptual level'
+      ]
+    },
+    {
+      id:'phase-1', num:'01', label:'Material Master', title:'Material Master', time:'3–6 weeks',
+      desc:'The central logistical object shared by both MM and SD. Creation, extension, views, material types, valuation class, price control, and the ECC → S/4HANA field changes that break custom code.',
+      codes:['MM01 / MM02 / MM03','Manage Product Master Data (Fiori)'],
+      items:[
+        'Create and extend materials (MM01/MM02/MM03 and Fiori equivalent)',
+        'Work through views: Basic Data, Purchasing, MRP, Accounting/Costing, Sales, Warehouse, QM',
+        'Understand material types, units of measure, valuation class',
+        'Understand price control (S vs V) and its downstream impact',
+        'Note the 18→40 character material number extension and custom-code impact',
+        'Practice mass maintenance (MM17) and assess data-quality impact on downstream processes'
+      ]
+    },
+    {
+      id:'phase-2', num:'02', label:'MM / Procurement', title:'MM · Sourcing &amp; Procurement', time:'6–10 weeks',
+      desc:'The full Purchase-to-Pay cycle plus the logistics that move material from supplier to plant — and where it hands off to PP, WM/EWM, FI, and QM.',
+      codes:['S4500','S4520 / S4550','C_TS452'],
+      items:[
+        'Requirement determination → source determination (info records, source lists, quota arrangements)',
+        'Purchase Requisition → RFQ/Quotation → PO / Contract / Scheduling Agreement',
+        'Goods Receipt → Invoice Verification → Payment',
+        'Inventory management: goods movements, stock types, physical inventory',
+        'Special procurement: stock transport orders, subcontracting, consignment, third-party',
+        'Trace integration points into PP (MRP), WM/EWM, FI (GR/IR), and QM',
+        'Practice classic transactions (ME21N, MIGO) alongside their Fiori apps'
+      ]
+    },
+    {
+      id:'phase-3', num:'03', label:'SD / Sales', title:'SD · Sales &amp; Distribution', time:'6–10 weeks',
+      desc:'The Order-to-Cash cycle, pricing, credit, and the shipping/logistics layer that pulls stock straight from MM.',
+      codes:['S4600 series','C_TS462'],
+      items:[
+        'Inquiry/Quotation → Sales Order → Availability check (ATP / Advanced ATP)',
+        'Delivery → Picking/Packing/Shipping → Billing',
+        'Pricing via the condition technique; credit management basics',
+        'Output determination, returns, free-of-charge processes',
+        'Trace shipping point determination and delivery relevance back to MM stock',
+        'Practice VA01 / VL01N / VF01 alongside Fiori Sales apps'
+      ]
+    },
+    {
+      id:'phase-4', num:'04', label:'Integration', title:'Cross-Module Integration &amp; Configuration', time:'ongoing',
+      desc:'Where MM and SD actually meet: sales views on the material master, org-structure dependencies, account determination, and project-level configuration skills.',
+      codes:['SPRO / IMG','Release strategies'],
+      items:[
+        'Connect Material Master sales views to available-stock logic',
+        'Map org-structure dependencies across MM and SD',
+        'Understand account determination and output/workflow triggers',
+        'Practice configuration in IMG / SPRO and pricing procedures',
+        'Run ticket-style simulations across both modules',
+        'Build brownfield-conversion awareness (what breaks in a real migration)'
+      ]
+    },
+    {
+      id:'phase-5', num:'05', label:'Technical Layer', title:'Deep Technical Layer', time:'parallel or after',
+      desc:'The differentiator: MATDOC, Material Ledger, Open SQL/CDS, and clean-core extension patterns. This is what separates a functional consultant from a migration or technical one.',
+      codes:['HA400-style ABAP on HANA','CDS deep-dive'],
+      items:[
+        'Understand MATDOC as the single source of truth for material documents',
+        'Learn how classic tables (MARD/MARC/MBEW) are now compatibility views',
+        'Understand Material Ledger as the mandatory valuation subledger',
+        'Learn the Actual Costing cycle (CKMLCP) if going technical-deep',
+        'Learn Open SQL fundamentals inside ABAP programs',
+        'Learn CDS views: associations, annotations, currency/unit conversion',
+        'Query MATDOC and material-master compatibility tables directly'
+      ]
+    },
+  ];
+
+  const lensData = {
+    ecc:[
+      {h:'Inventory Data Model', b:'<code>MKPF</code> (header) + <code>MSEG</code> (items) hold every material movement. Stock quantities persist in <code>MARD</code>, <code>MARC</code>, <code>MBEW</code>. Reporting means <b>multi-table joins</b> and periodic reconciliation.'},
+      {h:'Valuation Engine', b:'Material Ledger is <b>optional</b> — activated only for selected plants or where multi-currency valuation is actually needed.'},
+      {h:'Master Data', b:'Vendors and customers live in separate master objects (<code>XK01</code> / <code>XD01</code>), maintained independently.'},
+      {h:'SD Pricing &amp; Status', b:'Pricing conditions sit in the <code>KONV</code> cluster table. Header/item status live separately in <code>VBUK</code> / <code>VBUP</code>.'},
+      {h:'Transactions &amp; UI', b:'SAP GUI transaction codes, index tables, and LIS aggregates. Many discrete <code>MB*</code> codes for individual goods-movement types.'},
+    ],
+    s4:[
+      {h:'Inventory Data Model', b:'<code>MATDOC</code> is the single source of truth — header + item combined. Stock is <b>calculated on the fly</b> via CDS views; a <code>RecordType</code> field distinguishes document qualities. Old table names survive as compatibility views.'},
+      {h:'Valuation Engine', b:'Material Ledger is <b>mandatory</b> for every material/plant, feeding the Universal Journal (<code>ACDOCA</code>) directly. Actual Costing via <code>CKMLCP</code> stays optional — and once ML is active, it <b>cannot be deactivated</b>.'},
+      {h:'Master Data', b:'Vendor and customer masters converge into a mandatory <b>Business Partner</b> (<code>BP</code>) with roles. Customer-Vendor Integration (<b>CVI</b>) is required during conversion.'},
+      {h:'SD Pricing &amp; Status', b:'Pricing moves to the transparent <code>PRCD_ELEMENTS</code> table. Status is folded directly into <code>VBAK</code>/<code>VBAP</code>, <code>LIKP</code>/<code>LIPS</code>, <code>VBRK</code>.'},
+      {h:'Transactions &amp; UI', b:'Fiori role-based apps, embedded analytics, MRP Live. <code>MIGO</code> absorbs most goods-movement variants; performance work shifts from index tuning to CDS/code push-down.'},
+    ]
+  };
+
+  const techCards = [
+    { title:'MATDOC', icon:'M4 6h16M4 12h16M4 18h10', flow:'Movement → MATDOC (single record) → MATDOC_EXTRACT → CDS aggregation → live stock',
+      body:['Stores every goods movement — receipt, issue, transfer — as one authoritative, document-level record.',
+            'Classic stock views (MARD/MARC/MBEW) become <b>virtual, calculated</b> rather than persisted.',
+            'Volumes can reach billions of rows, which is why archiving and lifecycle management stop being optional.']},
+    { title:'Material Ledger', icon:'M6 4h12v16H6zM9 8h6M9 12h6M9 16h4', flow:'Movements + price/FX/production variance → ML → ACDOCA (Universal Journal)',
+      body:['The mandatory valuation subledger — collects price differences, exchange-rate differences, and production variances.',
+            'With Actual Costing on, period-end <code>CKMLCP</code> computes a Periodic Unit Price and revalues inventory and consumption.',
+            'Currency/valuation types must be explicitly defined in configuration before go-live.']},
+    { title:'SQL for SAP', icon:'M4 4h16v4H4zM4 10h10v4H4zM4 16h14v4H4', flow:'Open SQL (ABAP) → CDS Views (DDL, push-down) → AMDP / Native SQL when needed',
+      body:['Open SQL is database-independent and remains the primary language inside ABAP programs.',
+            'CDS views are the preferred modeling layer — associations instead of joins, annotations, and push-down execution to HANA.',
+            'Classic SQL skills transfer well with syntax adaptation; HANA SQLScript is secondary for most MM/SD consultants.']},
+  ];
+
+  const perspectives = [
+    {tag:'FUNCTIONAL', text:'Emphasizes process continuity and Fiori/Business Partner adoption over deep table-level change.'},
+    {tag:'TECHNICAL / MIGRATION', text:'Stresses data-model remediation, clean-core principles, and the risk of unaddressed custom code.'},
+    {tag:'JOB MARKET (2025–26)', text:'Sustained demand for dual ECC + S/4 knowledge while migrations are still in flight.'},
+  ];
+
+  // ---------- render phases ----------
+  const content = document.getElementById('content');
+  const deepSection = document.getElementById('deep').parentElement ? null : null;
+  const deepNode = document.getElementById('deep');
+
+  phases.forEach(p=>{
+    const sec = document.createElement('section');
+    sec.className = 'phase';
+    sec.id = p.id;
+    sec.innerHTML = `
+      <div class="phase-head">
+        <div>
+          <div class="phase-kicker">PHASE ${p.num}</div>
+          <div class="phase-title">${p.title}</div>
+        </div>
+        <div class="phase-time">${p.time}</div>
+      </div>
+      <p class="phase-desc">${p.desc}</p>
+      <div class="codes-row">${p.codes.map(c=>`<span class="code-tag">${c}</span>`).join('')}</div>
+      <div class="checklist" data-phase="${p.id}">
+        ${p.items.map((it,i)=>`
+          <div class="check-row">
+            <div class="check-item" data-phase="${p.id}" data-idx="${i}">
+              <div class="check-box"></div>
+              <span class="label">${it}</span>
+            </div>
+            <div class="item-resources">
+              <button class="attach-btn" data-key="${p.id}::${i}" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 11.5V17a4 4 0 0 1-4 4H9a5 5 0 0 1-5-5V7a3 3 0 0 1 3-3h6.5a3 3 0 0 1 3 3v9a2 2 0 0 1-2 2 2 2 0 0 1-2-2V8"/></svg>
+                Attach PDF
+              </button>
+              <input type="file" accept="application/pdf,.pdf" class="file-input" data-key="${p.id}::${i}" hidden>
+              <div class="resource-chips" data-key="${p.id}::${i}"></div>
+            </div>
+          </div>`).join('')}
+      </div>
+    `;
+    content.insertBefore(sec, document.getElementById('lens'));
+  });
+
+  // ---------- render sidebar links ----------
+  const sidebar = document.getElementById('sidebar');
+  phases.forEach(p=>{
+    const a = document.createElement('a');
+    a.className='side-link'; a.href='#'+p.id; a.dataset.target=p.id;
+    a.innerHTML = `${p.label}<small>${p.num}</small>`;
+    sidebar.insertBefore(a, sidebar.querySelector('.side-divider'));
+  });
+
+  // ---------- render rail ----------
+  const railTrack = document.getElementById('railTrack');
+  phases.forEach((p,i)=>{
+    const btn = document.createElement('button');
+    btn.className='rail-node'; btn.dataset.target=p.id;
+    btn.innerHTML = `<div class="rail-dot"><span>${p.num}</span></div><div class="rail-label">${p.label}</div>`;
+    railTrack.appendChild(btn);
+  });
+
+  // ---------- render lens grid ----------
+  const lensGrid = document.getElementById('lensGrid');
+  function renderLens(mode){
+    lensGrid.innerHTML = lensData[mode].map(c=>`
+      <div class="lens-card"><h4>${c.h}</h4><p>${c.b}</p></div>
+    `).join('');
+  }
+  renderLens('ecc');
+  document.getElementById('btnEcc').addEventListener('click',()=>{
+    document.getElementById('lensPanel').dataset.lens='ecc';
+    document.getElementById('btnEcc').classList.add('active');
+    document.getElementById('btnS4').classList.remove('active','s4');
+    renderLens('ecc');
+  });
+  document.getElementById('btnS4').addEventListener('click',()=>{
+    document.getElementById('lensPanel').dataset.lens='s4';
+    document.getElementById('btnS4').classList.add('active','s4');
+    document.getElementById('btnEcc').classList.remove('active');
+    renderLens('s4');
+  });
+
+  // ---------- render tech cards ----------
+  const techGrid = document.getElementById('techGrid');
+  techGrid.innerHTML = techCards.map(t=>`
+    <div class="tech-card">
+      <svg class="tech-icon" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-linecap="round"><path d="${t.icon}"/></svg>
+      <h3>${t.title}</h3>
+      ${t.body.map(b=>`<p>${b}</p>`).join('')}
+      <div class="flow">${t.flow}</div>
+    </div>
+  `).join('');
+
+  // ---------- render perspective chips ----------
+  document.getElementById('perspectives').innerHTML = perspectives.map(p=>`
+    <div class="persp-chip"><span class="persp-tag">${p.tag}</span><span>${p.text}</span></div>
+  `).join('');
+
+  // ---------- progress state ----------
+  const STORAGE_KEY = 'sap-mm-sd-roadmap-progress';
+  let checkedState = {};
+
+  function allItemKeys(){
+    const keys=[];
+    phases.forEach(p=>p.items.forEach((_,i)=>keys.push(p.id+'::'+i)));
+    return keys;
+  }
+
+  function computeProgress(){
+    const keys = allItemKeys();
+    const done = keys.filter(k=>checkedState[k]).length;
+    document.getElementById('progressText').textContent = done+' / '+keys.length+' milestones';
+    document.getElementById('progressFill').style.width = (keys.length? (done/keys.length*100):0)+'%';
+
+    // per-phase completion for rail + fill
+    let completeCount = 0;
+    phases.forEach((p,i)=>{
+      const total = p.items.length;
+      const doneP = p.items.filter((_,idx)=>checkedState[p.id+'::'+idx]).length;
+      const node = document.querySelectorAll('.rail-node')[i];
+      if(doneP===total && total>0){ node.classList.add('complete'); completeCount++; }
+      else { node.classList.remove('complete'); }
+    });
+    document.getElementById('railFill').style.width = (phases.length? (completeCount/phases.length*100):0)+'%';
+  }
+
+  function applyCheckedDOM(){
+    document.querySelectorAll('.check-item').forEach(el=>{
+      const key = el.dataset.phase+'::'+el.dataset.idx;
+      el.classList.toggle('checked', !!checkedState[key]);
+    });
+    computeProgress();
+  }
+
+  async function loadProgress(){
+    try{
+      const res = await window.storage.get(STORAGE_KEY, false);
+      if(res && res.value){
+        checkedState = JSON.parse(res.value);
+      }
+    }catch(e){
+      checkedState = {};
+    }
+    applyCheckedDOM();
+  }
+
+  async function saveProgress(){
+    const label = document.getElementById('saveState');
+    try{
+      await window.storage.set(STORAGE_KEY, JSON.stringify(checkedState), false);
+      label.textContent = 'progress saved';
+    }catch(e){
+      label.textContent = 'progress kept for this session only';
+    }
+  }
+
+  content.addEventListener('click', (e)=>{
+    const item = e.target.closest('.check-item');
+    if(!item) return;
+    const key = item.dataset.phase+'::'+item.dataset.idx;
+    checkedState[key] = !checkedState[key];
+    applyCheckedDOM();
+    saveProgress();
+  });
+
+  loadProgress();
+
+  // ---------- nav: rail + sidebar highlighting, click-to-scroll ----------
+  const railNodes = Array.from(document.querySelectorAll('.rail-node'));
+  const sideLinks = Array.from(document.querySelectorAll('.side-link'));
+
+  function goTo(id){
+    const el = document.getElementById(id);
+    if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+  railNodes.forEach(n=> n.addEventListener('click', ()=>goTo(n.dataset.target)));
+  sideLinks.forEach(n=> n.addEventListener('click', (e)=>{ e.preventDefault(); goTo(n.dataset.target); }));
+
+  const allSectionIds = ['resources'].concat(phases.map(p=>p.id)).concat(['lens','deep']);
+  const observer = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        const id = entry.target.id;
+        railNodes.forEach(n=> n.classList.toggle('active', n.dataset.target===id));
+        sideLinks.forEach(n=> n.classList.toggle('current', n.dataset.target===id));
+      }
+    });
+  }, { rootMargin:'-20% 0px -65% 0px', threshold:0 });
+
+  allSectionIds.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) observer.observe(el);
+  });
+
+  // =====================================================================
+  // PDF resource attachments — uploaded straight to a GitHub repo via the
+  // Contents API, then served back from GitHub (raw.githubusercontent.com
+  // for public repos, or fetched through the API for private ones). A
+  // manifest.json file in the repo is the source of truth for which PDF
+  // belongs to which checklist line, so it's the same for every visitor —
+  // not just the browser that uploaded it.
+  // =====================================================================
+
+  let resourceCache = []; // {id, phaseId, itemIndex, filename, size, addedAt, path, sha, download_url, html_url}
+  let manifestSha = null;
+
+  const CFG_KEY = 'sapRoadmapGithubConfig';
+  const TOKEN_KEY = 'sapRoadmapGithubToken';
+  let cfg = { owner:'', repo:'', branch:'main', prefix:'resources', token:'' };
+
+  function loadConfig(){
+    try{
+      const raw = localStorage.getItem(CFG_KEY);
+      if(raw) Object.assign(cfg, JSON.parse(raw));
+      cfg.token = localStorage.getItem(TOKEN_KEY) || '';
+    }catch(e){ /* storage unavailable in this preview; cfg stays in-memory only */ }
+  }
+  function saveConfig(){
+    try{
+      const { owner, repo, branch, prefix } = cfg;
+      localStorage.setItem(CFG_KEY, JSON.stringify({ owner, repo, branch, prefix }));
+      if(cfg.token) localStorage.setItem(TOKEN_KEY, cfg.token);
+    }catch(e){ /* in-memory only for this session */ }
+  }
+  function forgetToken(){
+    cfg.token = '';
+    try{ localStorage.removeItem(TOKEN_KEY); }catch(e){}
+  }
+  function isConfigured(){ return !!(cfg.owner && cfg.repo); }
+  function canWrite(){ return isConfigured() && !!cfg.token; }
+
+  function makeId(){
+    return (crypto && crypto.randomUUID) ? crypto.randomUUID() : 'r'+Date.now()+Math.random().toString(16).slice(2);
+  }
+  function fmtSize(bytes){
+    if(bytes < 1024) return bytes+' B';
+    if(bytes < 1024*1024) return (bytes/1024).toFixed(0)+' KB';
+    return (bytes/(1024*1024)).toFixed(1)+' MB';
+  }
+  function encodePath(path){ return path.split('/').map(encodeURIComponent).join('/'); }
+  function sanitizeFilename(name){ return name.replace(/[^a-zA-Z0-9._-]/g, '-'); }
+  function apiHeaders(extra){
+    const h = Object.assign({ Accept:'application/vnd.github+json' }, extra||{});
+    if(cfg.token) h.Authorization = 'Bearer '+cfg.token;
+    return h;
+  }
+
+  function fileToBase64(file){
+    return new Promise((resolve,reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=>resolve(reader.result.split(',')[1]);
+      reader.onerror = ()=>reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function ghUpload(file, path, message){
+    const content = await fileToBase64(file);
+    const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${encodePath(path)}`;
+    const res = await fetch(url, {
+      method:'PUT',
+      headers: apiHeaders({'Content-Type':'application/json'}),
+      body: JSON.stringify({ message, content, branch: cfg.branch })
+    });
+    if(!res.ok){ throw new Error(`GitHub upload failed (${res.status}): ${await res.text()}`); }
+    return res.json();
+  }
+
+  async function ghDeleteFile(path, sha, message){
+    const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${encodePath(path)}`;
+    const res = await fetch(url, {
+      method:'DELETE',
+      headers: apiHeaders({'Content-Type':'application/json'}),
+      body: JSON.stringify({ message, sha, branch: cfg.branch })
+    });
+    if(!res.ok){ throw new Error(`GitHub delete failed (${res.status}): ${await res.text()}`); }
+    return res.json();
+  }
+
+  async function ghGetManifest(){
+    const path = cfg.prefix+'/manifest.json';
+    try{
+      const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${encodePath(path)}?ref=${cfg.branch}`;
+      const res = await fetch(url, { headers: apiHeaders() });
+      if(res.status===404) return { list:[], sha:null };
+      if(!res.ok) throw new Error('status '+res.status);
+      const json = await res.json();
+      const decoded = decodeURIComponent(escape(atob(json.content.replace(/\n/g,''))));
+      return { list: JSON.parse(decoded), sha: json.sha };
+    }catch(e){
+      // Public fallback: works even without a token, for read-only visitors.
+      try{
+        const rawUrl = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/${cfg.branch}/${path}`;
+        const res = await fetch(rawUrl);
+        if(!res.ok) return { list:[], sha:null };
+        return { list: await res.json(), sha:null };
+      }catch(e2){ return { list:[], sha:null }; }
+    }
+  }
+
+  async function ghPutManifest(list){
+    const path = cfg.prefix+'/manifest.json';
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(list, null, 2))));
+    const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${encodePath(path)}`;
+    const body = { message:'Update resources manifest', content, branch: cfg.branch };
+    if(manifestSha) body.sha = manifestSha;
+    const res = await fetch(url, { method:'PUT', headers: apiHeaders({'Content-Type':'application/json'}), body: JSON.stringify(body) });
+    if(!res.ok){ throw new Error(`Manifest update failed (${res.status}): ${await res.text()}`); }
+    const json = await res.json();
+    manifestSha = json.content.sha;
+  }
+
+  async function fetchFileBlob(r){
+    if(cfg.token){
+      const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${encodePath(r.path)}?ref=${cfg.branch}`;
+      const res = await fetch(url, { headers: apiHeaders({ Accept:'application/vnd.github.raw' }) });
+      if(res.ok) return res.blob();
+    }
+    const res2 = await fetch(r.download_url);
+    if(!res2.ok) throw new Error('Could not load this file (repo may be private and no token is set).');
+    return res2.blob();
+  }
+
+  // ---------- rendering ----------
+  function keyOf(r){ return r.phaseId+'::'+r.itemIndex; }
+  const PDF_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>`;
+
+  function chipHTML(r){
+    return `<div class="resource-chip" data-id="${r.id}" title="${r.filename} · ${fmtSize(r.size)}">
+      ${PDF_ICON}<span class="chip-name">${r.filename}</span>
+      <button class="chip-delete" data-id="${r.id}" type="button" title="Remove">✕</button>
+    </div>`;
+  }
+  function loadingChipHTML(tempId, filename){
+    return `<div class="resource-chip" data-id="${tempId}" data-loading="1" title="Uploading…">
+      ${PDF_ICON}<span class="chip-name">${filename} — uploading…</span>
+    </div>`;
+  }
+
+  function renderChipsForKey(key){
+    const holders = document.querySelectorAll(`.resource-chips[data-key="${key}"]`);
+    const list = resourceCache.filter(r=>keyOf(r)===key);
+    holders.forEach(holder=>{ holder.innerHTML = list.map(chipHTML).join(''); });
+  }
+  function renderAllChips(){
+    const keys = new Set(resourceCache.map(keyOf));
+    document.querySelectorAll('.resource-chips').forEach(el=>{
+      if(!keys.has(el.dataset.key)) el.innerHTML='';
+    });
+    keys.forEach(renderChipsForKey);
+  }
+
+  function phaseTitleFor(id){ const p = phases.find(x=>x.id===id); return p ? p.label : id; }
+  function itemLabelFor(id, idx){ const p = phases.find(x=>x.id===id); return p ? p.items[idx] : ''; }
+
+  function renderResourcesTab(){
+    document.getElementById('resCount').textContent = resourceCache.length;
+    const body = document.getElementById('resourcesTabBody');
+    if(resourceCache.length === 0){
+      body.innerHTML = `<div class="res-empty">Nothing here yet — attach a PDF to any checklist line and it'll show up here, organized by topic.</div>`;
+      return;
+    }
+    const byPhase = {};
+    resourceCache.forEach(r=>{
+      byPhase[r.phaseId] = byPhase[r.phaseId] || {};
+      byPhase[r.phaseId][r.itemIndex] = byPhase[r.phaseId][r.itemIndex] || [];
+      byPhase[r.phaseId][r.itemIndex].push(r);
+    });
+    const phaseOrder = phases.map(p=>p.id).filter(id=>byPhase[id]);
+    body.innerHTML = phaseOrder.map(pid=>{
+      const items = byPhase[pid];
+      const itemBlocks = Object.keys(items).sort((a,b)=>a-b).map(idx=>{
+        const list = items[idx];
+        return `<div class="res-item-block">
+          <div class="res-item-label">${itemLabelFor(pid, idx)}</div>
+          <div class="resource-chips" data-key="${pid}::${idx}">${list.map(chipHTML).join('')}</div>
+        </div>`;
+      }).join('');
+      return `<div class="res-phase-group">
+        <div class="res-phase-label">${phaseTitleFor(pid)}</div>
+        ${itemBlocks}
+      </div>`;
+    }).join('');
+  }
+
+  function renderResourceBanner(){
+    const el = document.getElementById('resourceBanner');
+    if(!isConfigured()){
+      el.innerHTML = `<div class="resource-banner offline">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+        <div>Not connected yet. <button class="link-btn" id="bannerConnect" type="button">Connect a GitHub repo</button> to upload PDFs — they'll be stored there and read back into the page.</div>
+      </div>`;
+      const btn = document.getElementById('bannerConnect');
+      if(btn) btn.addEventListener('click', openSettings);
+    } else if(!canWrite()){
+      el.innerHTML = `<div class="resource-banner offline">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+        <div>Connected to <b>${cfg.owner}/${cfg.repo}</b> read-only — viewing works, but uploading needs a token. <button class="link-btn" id="bannerToken" type="button">Add a token</button>.</div>
+      </div>`;
+      const btn = document.getElementById('bannerToken');
+      if(btn) btn.addEventListener('click', openSettings);
+    } else {
+      el.innerHTML = `<div class="resource-banner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l9 4.5v9L12 22l-9-6.5v-9z"/><path d="M12 12v10M3 6.5l9 5.5 9-5.5"/></svg>
+        <div>PDFs upload straight to <b>${cfg.owner}/${cfg.repo}</b> (${cfg.branch}) under <code class="inline-code">/${cfg.prefix}</code> — visible to anyone who opens this page, not just this browser.</div>
+      </div>`;
+    }
+  }
+
+  async function loadResources(){
+    if(!isConfigured()){ renderResourceBanner(); renderAllChips(); renderResourcesTab(); return; }
+    const { list, sha } = await ghGetManifest();
+    resourceCache = list || [];
+    manifestSha = sha;
+    renderResourceBanner();
+    renderAllChips();
+    renderResourcesTab();
+  }
+
+  async function handleFileSelect(input){
+    const file = input.files && input.files[0];
+    input.value = '';
+    if(!file) return;
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if(!isPdf){ alert('Please choose a PDF file.'); return; }
+    if(!canWrite()){ openSettings(); return; }
+
+    const key = input.dataset.key;
+    const [phaseId, idxStr] = key.split('::');
+    const itemIndex = Number(idxStr);
+    const id = makeId();
+
+    // optimistic "uploading" chip
+    document.querySelectorAll(`.resource-chips[data-key="${key}"]`).forEach(holder=>{
+      holder.insertAdjacentHTML('beforeend', loadingChipHTML(id, file.name));
+    });
+
+    try{
+      const path = `${cfg.prefix}/${phaseId}-${itemIndex}-${id.slice(0,8)}-${sanitizeFilename(file.name)}`;
+      const uploadRes = await ghUpload(file, path, `Add resource: ${file.name}`);
+      const record = {
+        id, phaseId, itemIndex, filename:file.name, size:file.size, addedAt:Date.now(),
+        path, sha:uploadRes.content.sha, download_url:uploadRes.content.download_url, html_url:uploadRes.content.html_url
+      };
+      resourceCache.push(record);
+      renderChipsForKey(key);
+      renderResourcesTab();
+      await ghPutManifest(resourceCache);
+    }catch(err){
+      alert('Upload failed: '+err.message);
+      renderChipsForKey(key); // drop the loading chip
+    }
+  }
+
+  async function deleteResourceById(id){
+    const r = resourceCache.find(x=>x.id===id);
+    if(!r) return;
+    if(!canWrite()){ alert('Add a GitHub token with write access to delete files.'); openSettings(); return; }
+    if(!confirm(`Remove "${r.filename}" from GitHub and from the roadmap?`)) return;
+    try{
+      await ghDeleteFile(r.path, r.sha, `Remove resource: ${r.filename}`);
+      resourceCache = resourceCache.filter(x=>x.id!==id);
+      renderAllChips();
+      renderResourcesTab();
+      await ghPutManifest(resourceCache);
+    }catch(err){
+      alert('Could not delete: '+err.message);
+    }
+  }
+
+  // ---------- viewer modal ----------
+  let currentObjectUrl = null;
+  async function openViewer(id){
+    const r = resourceCache.find(x=>x.id===id);
+    if(!r) return;
+    document.getElementById('pdfModal').classList.add('open');
+    document.getElementById('modalTitle').textContent = 'Loading '+r.filename+'…';
+    document.getElementById('modalFrame').src = 'about:blank';
+    document.getElementById('modalNewTab').href = r.html_url || '#';
+    try{
+      const blob = await fetchFileBlob(r);
+      if(currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+      currentObjectUrl = URL.createObjectURL(blob);
+      document.getElementById('modalTitle').textContent = r.filename;
+      document.getElementById('modalFrame').src = currentObjectUrl;
+      document.getElementById('modalDownload').href = currentObjectUrl;
+      document.getElementById('modalDownload').setAttribute('download', r.filename);
+    }catch(err){
+      document.getElementById('modalTitle').textContent = 'Could not load '+r.filename;
+    }
+  }
+  function closeViewer(){
+    document.getElementById('pdfModal').classList.remove('open');
+    document.getElementById('modalFrame').src = 'about:blank';
+    if(currentObjectUrl){ URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
+  }
+  document.getElementById('modalClose').addEventListener('click', closeViewer);
+  document.getElementById('pdfModal').addEventListener('click', (e)=>{ if(e.target.id==='pdfModal') closeViewer(); });
+  document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeViewer(); closeSettings(); } });
+
+  // ---------- settings modal ----------
+  function openSettings(){
+    document.getElementById('cfgOwner').value = cfg.owner;
+    document.getElementById('cfgRepo').value = cfg.repo;
+    document.getElementById('cfgBranch').value = cfg.branch || 'main';
+    document.getElementById('cfgPrefix').value = cfg.prefix || 'resources';
+    document.getElementById('cfgToken').value = cfg.token || '';
+    document.getElementById('settingsModal').classList.add('open');
+  }
+  function closeSettings(){ document.getElementById('settingsModal').classList.remove('open'); }
+
+  document.getElementById('settingsBtn').addEventListener('click', openSettings);
+  document.getElementById('settingsClose').addEventListener('click', closeSettings);
+  document.getElementById('settingsModal').addEventListener('click', (e)=>{ if(e.target.id==='settingsModal') closeSettings(); });
+
+  document.getElementById('settingsForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    cfg.owner = document.getElementById('cfgOwner').value.trim();
+    cfg.repo = document.getElementById('cfgRepo').value.trim();
+    cfg.branch = document.getElementById('cfgBranch').value.trim() || 'main';
+    cfg.prefix = document.getElementById('cfgPrefix').value.trim().replace(/^\/|\/$/g,'') || 'resources';
+    cfg.token = document.getElementById('cfgToken').value.trim();
+    saveConfig();
+    closeSettings();
+    await loadResources();
+  });
+  document.getElementById('cfgForgetToken').addEventListener('click', ()=>{
+    forgetToken();
+    document.getElementById('cfgToken').value = '';
+    renderResourceBanner();
+  });
+
+  // ---------- delegated events for attach / chip click / delete ----------
+  document.addEventListener('click', (e)=>{
+    const attachBtn = e.target.closest('.attach-btn');
+    if(attachBtn){
+      if(!canWrite()){ openSettings(); return; }
+      const input = document.querySelector(`.file-input[data-key="${attachBtn.dataset.key}"]`);
+      if(input) input.click();
+      return;
+    }
+    const delBtn = e.target.closest('.chip-delete');
+    if(delBtn){
+      e.stopPropagation();
+      deleteResourceById(delBtn.dataset.id);
+      return;
+    }
+    const chip = e.target.closest('.resource-chip');
+    if(chip && !chip.dataset.loading){ openViewer(chip.dataset.id); return; }
+  });
+
+  document.addEventListener('change', (e)=>{
+    if(e.target.matches('.file-input')) handleFileSelect(e.target);
+  });
+
+  loadConfig();
+  loadResources();
+
+})();
+</script>
+</body>
+</html>
